@@ -12,11 +12,14 @@
   <<font_configuration>>
 
   <<evil>>
+  <<file_management>>
 
   <<org_mode>>
 
 
   <<magit>>
+
+  <<shell>>
 
   <<development>>
 
@@ -77,6 +80,7 @@
 		  term-mode-hook
 		  shell-mode-hook
 		  treemacs-mode-hook
+		  vterm-mode-hook
 		  eshell-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
@@ -86,13 +90,15 @@
 #+NAME: font_configuration
 #+begin_src emacs-lisp
 
-  (set-face-attribute 'default nil :font "Cantarell" :height 100)
+  ;; (set-frame-font "JetBrainsMono light 9" nil t)
+
+  (set-face-attribute 'default nil :font "JetBrainsMono" :height 90)
 
   ;; Set the fixed pitch face
-  (set-face-attribute 'fixed-pitch nil :font "Cantarell" :height 100)
+  (set-face-attribute 'fixed-pitch nil :font "JetBrainsMono" :height 90)
 
   ;; Set the variable pitch face
-  (set-face-attribute 'variable-pitch nil :font "Cantarell" :weight 'regular :height 100)
+  (set-face-attribute 'variable-pitch nil :font "JetBrainsMono" :weight 'regular :height 90)
 
 #+end_src
 
@@ -143,6 +149,38 @@
     :config
     (evil-collection-init))
 
+#+end_src
+
+* File Management 
+#+NAME: file_management
+#+begin_src emacs-lisp
+
+(use-package dired
+  :ensure nil
+  :commands (dired dired-jump)
+  :bind (("C-x C-j" . dired-jump))
+  :config
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "h" 'dired-up-directory
+    "l" 'dired-find-file))
+
+
+;; Inside `use-package dired`
+(use-package dired-single)
+
+(evil-collection-define-key 'normal 'dired-mode-map
+  "h" 'dired-single-up-directory
+  "l" 'dired-single-buffer)
+      
+(use-package all-the-icons-dired
+  :hook (dired-mode . all-the-icons-dired-mode))
+
+(use-package dired-hide-dotfiles
+  :hook (dired-mode . dired-hide-dotfiles-mode)
+  :config
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "H" 'dired-hide-dotfiles-mode))
+    
 #+end_src
 
 * UI Configuration
@@ -213,7 +251,8 @@
 	   ("C-k" . ivy-previous-line)
 	   ("C-d" . ivy-reverse-i-search-kill))
     :config
-    (ivy-mode 1))
+    (ivy-mode 1)
+    (set-face-attribute 'ivy-current-match nil :background "dark violet"))
 
   (use-package ivy-rich
     :init
@@ -328,15 +367,15 @@
 			       (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
     ;; Set faces for heading levels
-    (dolist (face '((org-level-1 . 1.2)
-		    (org-level-2 . 1.1)
-		    (org-level-3 . 1.05)
+    (dolist (face '((org-level-1 . 1.08)
+		    (org-level-2 . 1.04)
+		    (org-level-3 . 1.02)
 		    (org-level-4 . 1.0)
-		    (org-level-5 . 1.1)
-		    (org-level-6 . 1.1)
-		    (org-level-7 . 1.1)
-		    (org-level-8 . 1.1)))
-      (set-face-attribute (car face) nil :font "Cantarell" :weight 'regular :height (cdr face)))
+		    (org-level-5 . 1.0)
+		    (org-level-6 . 1.0)
+		    (org-level-7 . 1.0)
+		    (org-level-8 . 1.0)))
+      (set-face-attribute (car face) nil :font "JetBrainsMono" :weight 'bold :height (cdr face)))
 
     ;; Ensure that anything that should be fixed-pitch in Org files appears that way
     (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
@@ -394,9 +433,12 @@
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((emacs-lisp . t)
-     (python . t)))
+     (python . t)
+     (shell . t)))
 
   (push '("conf-unix" . conf-unix) org-src-lang-modes)
+  
+  (setq org-confirm-babel-evaluate nil)
 
 #+end_src
 
@@ -406,9 +448,9 @@
 
   (require 'org-tempo)
 
-  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
-  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-  (add-to-list 'org-structure-template-alist '("py" . "src python"))
+  (add-to-list 'org-structure-template-alist '("cbsh" . "src shell"))
+  (add-to-list 'org-structure-template-alist '("cbel" . "src emacs-lisp"))
+  (add-to-list 'org-structure-template-alist '("cbpy" . "src python"))
 #+end_src
 
 * Magit
@@ -505,7 +547,7 @@
     :init
     ;; NOTE: Set this to the folder where you keep your Git repos!
     (when (file-directory-p "~/repos")
-      (setq projectile-project-search-path '("~/repos")))
+      (setq projectile-project-search-path '("~/repos" "/media/sf_shared/tasks/" "~/repos/tmp")))
     (setq projectile-switch-project-action #'projectile-dired))
 
   (use-package counsel-projectile
@@ -526,10 +568,20 @@
          ("<tab>" . company-indent-or-complete-common))
   :custom
   (company-minimum-prefix-length 1)
-  (company-idle-delay 0.0))
+  (company-idle-delay 0.0)
+  :config
+  (global-company-mode t))
 
 (use-package company-box
   :hook (company-mode . company-box-mode))
+
+;;(push (apply-partially #'cl-remove-if
+;;                      (lambda (c) (string-match-p "#\+" c)))
+;;             company-transformers)
+
+(use-package company-irony)
+(eval-after-load 'company
+  '(add-to-list 'company-backends 'company-irony))
 
 #+end_src
 
@@ -548,6 +600,27 @@
 
 #+end_src
 
+* Shell
+#+NAME: shell
+#+begin_src emacs-lisp
+  <<vterm>>
+#+end_src
+  
+** vterm
+#+NAME: vterm
+#+begin_src emacs-lisp
+   
+(use-package vterm
+  :commands vterm
+  :config
+  (setq term-prompt-regexp "^[^#$%>\n]*[#$%>] *")
+  ;;(setq vterm-shell "zsh")
+  (setq vterm-max-scrollback 10000))
+
+(use-package multi-vterm)
+
+#+end_src
+   
 * Utilities
 #+NAME: utilities
 #+begin_src emacs-lisp
@@ -589,3 +662,4 @@
                           (if (match-end 2) 2 1)))))))
 
 #+end_src
+
