@@ -354,6 +354,7 @@
   ;;<<center_alignment>>
   <<configure_babel>>
   <<snippets>>
+  <<babel_results>>
 #+end_src
 
 ** Font Faces
@@ -392,8 +393,8 @@
 #+NAME: ellipsis
 #+begin_src emacs-lisp
 
+  ;; :hook (org-mode . efs/org-mode-setup)
   (use-package org
-    :hook (org-mode . efs/org-mode-setup)
     :config
     (setq org-ellipsis " ▾")
     (efs/org-font-setup))
@@ -453,6 +454,11 @@
   (add-to-list 'org-structure-template-alist '("cbpy" . "src python"))
 #+end_src
 
+** Babel results
+#+NAME: babel_results
+#+begin_src emacs-lisp
+(add-hook 'org-mode-hook (lambda () (org-babel-result-hide-all)))
+#+end_src
 * Magit
 #+NAME: magit
 #+begin_src emacs-lisp
